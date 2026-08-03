@@ -2,58 +2,53 @@
 
 ## Overview
 
-Vender shopfront is the backend service responsible for handling HTTP/S traffic, user authentication, and the RESTful API (CRUD) for functional communication between the User and Vender.
+Vender shopfront is the backend system behind Vender. It uses Drogon (C++) to serve static files and implement a RESTful API (CRUD).
 
-## Technical Details
+MariaDB was chosen for the backend database due to personal familiarity with MySQL.
 
-- C++23 (Drogon Framework)
-- MariaDB (Persistent Data)
-- Redis (User Authentication)
+Redis was chosen as the backend cache for authentication because it is versatile and volatile.
 
-## System Design Choices
+## Performance and Efficiency
 
-*Nobody uses C++ for Web Dev, right?* Drogon Framework ("Drogon") is one of the fastest web frameworks on the market today. Rust has many great high performance options, and so does Go, *but does performance even matter?* Kind of.
+Drogon uses C++20 Coroutines and multi-threading capabilities, making it incredibly fast and efficient. Since shopfront is also stateless, it can easily scale horizontally.
 
-I was designing this project with the mindset that I could have a million users tomorrow. Obviously being a beginner, I did not take every single consideration, but I had a very valid reasons for choosing Drogon:
+When it comes to scaling to millions of users, the real cause for concern would be the databases. Without proper sharding or master/slave replication, the Redis and MariaDB instances would only be able to scale vertically. Luckily there are serverless solutions to account for that if this were to be deployed as an actual service.
 
-1) I am most familiar with modern C++
-2) Drogon has built-in concurrency (coroutines, threads)
-3) Drogon has built-in database support (MySQL, PostgreSQL, Redis)
+## Security and Compatibility
 
-As long as the backend remains stateless, and it also serves the frontend, I can therefore maximize optimization and still scale horizontally (magnitudes cheaper than scaling vertically).
+Unfortunately, HTTP/2.0 (beta) and HTTP/3.0 (not planned) are not currently supported in Drogon. HTTP/2.0 and HTTP/3.0 both bring significant performance and security improvements.
 
-Now why did I choose MariaDB over PostgreSQL? Familiarity. There are definite pros/cons with each, but their differences are negligible here and having to learn the Postgres way would take much longer while I am actively working a full-time job and studying for certifications.
+However, HTTP/1.1 is still widely supported and TLSv2/v3 are both implemented by OpenSSL.
 
-Redis is obvious here, with its data being stored in memory, thereby being incredibly quick to access; it saves a lot of database traffic.
+Alongside Drogon, web application security is also important. Tokens are uniquely generated and expire automatically, and authentication cookies are HttpOnly and Secure. Communications with the main database use Drogon's Object Relational Mapping (ORM) library to prevent SQL injection and communications with the Redis database are carefully structured to prevent this as well.
 
-## Security Concerns
+## Routing and Implementation
 
-There are a lot of potential security concerns:
+For optimal development, React builds as a single page application.
 
-- Encoding mismatches
-- Supply chain attacks (big in 2026)
-- CSRF/SSRF (token jacking)
-- XSS
-- Zero Days / Zero-Click RCEs
-- SQL Injection (SQLi)
-- Time of Check, Time of Use (TOCTOU) Race Conditions
-- etc.
+**There are problems with this.**
 
-The Secure by Design principle helps mitigate most of these. For example, instead of directly making SQL calls, shopfront uses Drogon's Object Relational Mapping (ORM) thereby eliminating the possibility of SQLi.
+There are many things wrong with this in production. For starters, it breaks SEO. No SEO = No Business.
 
-TOCTOU is a system design problem, and must be mitigated by synchronization + queueing. 
+Secondly, it denies the user the ability to navigate directly to a specific page via the URL.
 
-Unfortunately, Zero Days and Supply Chain attacks cannot exactly be mitigated. SAST and SCA are feasible mitigating controls, and DAST and IAST can help uncover downstream vulnerabilities at runtime. Here, it mostly is an accepted risk. (Again, this is a portfolio project.)
+**How is this fixed?**
 
-TLSv1.2 and TLSv1.3 are implemented in OpenSSL.
+To fix this, the frontend React-Vite project implements React-Router. Each page is specified in both the routes.ts file and the React HTTP Controller file. It's not pretty, but it gets the job done.
 
-## Performance/Scalability Concerns
+This gives the benefit of both client-side routing and multi-page applications.
 
-As previously mentioned, Drogon has concurrency out of the box. It is fully capable of maximizing its current node's resources and still able to scale horizontally.
+**One more problem.**
 
-Drogon only currently supports HTTP/1.1. HTTP/2.0 support is in Beta, and HTTP/3.0 remains unsupported. This is not a security concern, but may affect compatibility and performance. As of the time of writing this, HTTP/1.1 is still widely supported and Drogon is still highly performant that the benefits of HTTP/2.0 are likely to be negligible.
+The frontend and backend are separated. That means that data cannot be shared 1:1 like normal in a Next.js project.
+
+**How is that fixed?**
+
+It's not. There's no fix. That is just an unfortunate reality of development. To make them both work, a REST API must be used as optimally as possible, and data replication needs to exist between both the client and server side.
 
 ## Deployment
 
-Drogon uses Podman to build and deploy. Special accomodations have been added to support environment variables in the YAML configuration files.
+Deploying shopfront is possible with Docker or Podman. Environment variable support was added to the YAML/JSON files to allow for more straightforward deployment.
+
+The Containerfile is configured to grab the frontend automatically from GitHub.
 
