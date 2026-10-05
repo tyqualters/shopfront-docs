@@ -2,3 +2,6 @@
 title = "Vender Documentation"
 authors = ["Ty Qualters"]
 language = "en"
+
+[build]
+build-dir = "docs"
