@@ -2,5 +2,5 @@
 
 ## Overview
 
-Vender shopfront-docs is a non-technical documentation website that is written in Markdown and built with Rust's [mdBook](https://rust-lang.github.io/mdBook/). It is hosted on GitHub Pages.
+Vender shopfront-docs is a documentation website that is written in markdown and built with Rust's [mdBook](https://rust-lang.github.io/mdBook/). A GitHub Actions workflow was added to automatically build and deploy to GitHub Pages.
 
